@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+pyngrok
+nest-asyncio
+langchain
+langchain-community
+langchain-google-genai
+google-generativeai
+pymongo
+pypdf
+sentence-transformers
+faiss-cpu
+python-multipart
+aiohttp
+python-docx
+docx2txt
+unstructured
