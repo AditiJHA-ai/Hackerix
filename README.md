@@ -8,7 +8,7 @@ This project implements an API for analyzing insurance policy documents using La
 - 🔍 Semantic search using FAISS and HuggingFace embeddings
 - 🤖 Advanced policy analysis using Google's Gemini LLM
 - 🚀 FastAPI endpoint with authentication
-- 📊 Structured JSON responses
+- 📊 Structured JSON responses.
 
 ## API Endpoints
 
