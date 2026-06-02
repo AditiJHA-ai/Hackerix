@@ -44,7 +44,7 @@ print("✅")
 # ── 3. Real query (uses a public sample PDF) ─────────────────────────────────
 # Swap this URL for any publicly accessible policy PDF you want to test with.
 TEST_DOC_URL = (
-    "https://www.w3.org/WAI/WCAG21/Techniques/pdf/PDF2/table-of-contents.pdf"
+    "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
 )
 
 print(f"→ Querying document: {TEST_DOC_URL}")

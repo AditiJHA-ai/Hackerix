@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PolicyLens — Insurance Document Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+/* ─── RESET ─────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+/* ─── CONFIG — edit these to match your deployment ─── */
+/* (moved to JS CONFIG block below for easier editing)  */
+
+/* ─── TOKENS ─────────────────────────────────── */
+:root {
+  --bg:       #0d0f14;
+  --surface:  #14171f;
+  --surface2: #1c2030;
+  --surface3: #232840;
+  --line:     rgba(255,255,255,.07);
+  --line2:    rgba(255,255,255,.12);
+  --fg:       #e8eaf0;
+  --fg2:      #9ba0b4;
+  --fg3:      #5a6080;
+  --accent:   #4f6ef7;
+  --accent2:  #6b85ff;
+  --green:    #34d399;
+  --green-bg: rgba(52,211,153,.1);
+  --green-bd: rgba(52,211,153,.25);
+  --red:      #f87171;
+  --red-bg:   rgba(248,113,113,.1);
+  --red-bd:   rgba(248,113,113,.25);
+  --amber:    #fbbf24;
+  --amber-bg: rgba(251,191,36,.1);
+  --amber-bd: rgba(251,191,36,.25);
+  --serif: 'Instrument Serif', Georgia, serif;
+  --sans:  'Inter', system-ui, sans-serif;
+  --r: 12px;
+  --r-sm: 8px;
+  --r-lg: 16px;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── TOPBAR ─────────────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  height: 58px;
+  background: rgba(13,15,20,.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center;
+  padding: 0 2rem;
+  gap: 1rem;
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand-mark {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: linear-gradient(135deg, #3b5bff 0%, #6b85ff 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-style: italic; font-size: 17px; color: #fff;
+}
+.brand-name { font-family: var(--serif); font-size: 19px; color: var(--fg); letter-spacing: -.3px; }
+.topbar-tagline { font-size: 12px; color: var(--fg3); margin-left: 4px; }
+.topbar-spacer { flex: 1; }
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse 2.5s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+.status-label { font-size: 12px; color: var(--fg3); }
+
+/* ─── HERO ───────────────────────────────────── */
+.hero {
+  text-align: center;
+  padding: 4rem 1.5rem 3rem;
+  max-width: 580px;
+  margin: 0 auto;
+}
+.hero-eyebrow {
+  display: inline-block;
+  font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent2); font-weight: 500; margin-bottom: 1rem;
+  padding: 4px 12px; border-radius: 20px;
+  border: 1px solid rgba(107,133,255,.25);
+  background: rgba(107,133,255,.08);
+}
+.hero h1 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--fg);
+  margin-bottom: .75rem;
+  letter-spacing: -.5px;
+}
+.hero h1 em { font-style: italic; color: var(--accent2); }
+.hero p {
+  font-size: 15px; color: var(--fg2); line-height: 1.65; max-width: 440px; margin: 0 auto;
+}
+
+/* ─── MAIN LAYOUT ────────────────────────────── */
+.main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* ─── (rest of CSS identical to original index.html) */
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ──────────────────────────────────── -->
+<header class="topbar">
+  <a class="brand" href="#">
+    <div class="brand-mark">P</div>
+    <span class="brand-name">PolicyLens</span>
+  </a>
+  <span class="topbar-tagline">Insurance Document Analyzer</span>
+  <div class="topbar-spacer"></div>
+  <div class="status-dot" id="status-dot"></div>
+  <span class="status-label" id="status-label">Ready</span>
+</header>
+
+<!-- ── HERO ─────────────────────────────────────── -->
+<section class="hero">
+  <span class="hero-eyebrow">AI-Powered</span>
+  <h1>Understand your policy<br><em>instantly</em></h1>
+  <p>Upload a PDF or DOCX, ask plain-English questions, and get grounded answers with exact clause references.</p>
+</section>
+
+<!-- ── MAIN ─────────────────────────────────────── -->
+<div class="main">
+
+  <!-- LEFT: INPUT -->
+  <div>
+    <!-- Document input -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon">📄</div>
+        <div class="card-head-text">
+          <h3>Policy Document</h3>
+          <p>PDF, DOCX, or EML supported</p>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <div class="seg" role="tablist">
+          <button class="seg-btn active" id="tab-upload" role="tab" onclick="setInputMode('upload')">⬆ Upload File</button>
+          <button class="seg-btn" id="tab-url" role="tab" onclick="setInputMode('url')">🔗 Paste URL</button>
+        </div>
+
+        <!-- Upload pane -->
+        <div id="pane-upload">
+          <div class="drop-zone" id="drop-zone">
+            <input type="file" id="file-input" accept=".pdf,.docx,.eml" />
+            <div class="drop-icon" id="drop-icon">📂</div>
+            <div class="drop-title" id="drop-title">Drop your file here</div>
+            <div class="drop-sub" id="drop-sub">or click to browse — PDF, DOCX, EML up to 20 MB</div>
+            <div class="drop-filename" id="drop-filename" style="display:none;"></div>
+            <button class="drop-clear" id="drop-clear" style="display:none;" onclick="clearFile(event)" title="Remove file">✕</button>
+          </div>
+        </div>
+
+        <!-- URL pane -->
+        <div id="pane-url" style="display:none;">
+          <div class="field">
+            <label class="lbl">Document URL</label>
+            <input type="text" id="doc-url" placeholder="https://example.com/policy.pdf" />
+          </div>
+          <p style="font-size:12px; color:var(--fg3); line-height:1.55;">
+            Link must be publicly accessible. Supports PDF, DOCX, and EML.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Questions -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon">❓</div>
+        <div class="card-head-text">
+          <h3>Your Questions</h3>
+          <p>Ask anything about the document</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="q-list" id="q-list"></div>
+        <button class="btn-add-q" onclick="addQuestion()">＋ Add question</button>
+        <button class="btn-run" id="run-btn" onclick="runAnalysis()">
+          <span id="btn-label">Analyze Document</span>
+          <span id="btn-spinner" class="spinner" style="display:none;"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: RESULTS -->
+  <div class="results" id="results">
+    <div class="empty-state">
+      <div class="empty-glyph">📋</div>
+      <h3>Results will appear here</h3>
+      <p>Upload a document, ask your questions, and hit Analyze.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   CONFIG — update these for your deployment
+   ══════════════════════════════════════════════ */
+const CONFIG = {
+  API_BASE:     'http://127.0.0.1:8000',   // local server
+  BEARER_TOKEN: '729073fd98123a67be26b7a7d3ffe959a856b9616b3a9385d9452c5967ac8375',
+};
+/* ══════════════════════════════════════════════ */
+
+let inputMode = 'upload';   // 'upload' | 'url'
+let selectedFile = null;
+let questions = [
+  'What is the deductible amount?',
+  'Is surgery covered under this plan?',
+  'What is the out-of-pocket maximum?',
+];
+
+/* ── MODE TOGGLE ──────────────────────────── */
+function setInputMode(m) {
+  inputMode = m;
+  document.getElementById('tab-upload').classList.toggle('active', m === 'upload');
+  document.getElementById('tab-url').classList.toggle('active', m === 'url');
+  document.getElementById('pane-upload').style.display = m === 'upload' ? '' : 'none';
+  document.getElementById('pane-url').style.display = m === 'url' ? '' : 'none';
+}
+
+/* ── FILE DROP / PICK ─────────────────────── */
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+function setFile(f) {
+  selectedFile = f;
+  dropZone.classList.add('has-file');
+  document.getElementById('drop-icon').textContent = f.name.endsWith('.pdf') ? '📕' : '📘';
+  document.getElementById('drop-title').textContent = 'File selected';
+  document.getElementById('drop-sub').style.display = 'none';
+  document.getElementById('drop-filename').style.display = '';
+  document.getElementById('drop-filename').textContent = f.name;
+  document.getElementById('drop-clear').style.display = '';
+}
+
+function clearFile(e) {
+  e.stopPropagation();
+  selectedFile = null;
+  fileInput.value = '';
+  dropZone.classList.remove('has-file');
+  document.getElementById('drop-icon').textContent = '📂';
+  document.getElementById('drop-title').textContent = 'Drop your file here';
+  document.getElementById('drop-sub').style.display = '';
+  document.getElementById('drop-filename').style.display = 'none';
+  document.getElementById('drop-clear').style.display = 'none';
+}
+
+/* ── QUESTIONS ────────────────────────────── */
+function renderQuestions() {
+  document.getElementById('q-list').innerHTML = questions.map((q, i) => `
+    <div class="q-row">
+      <div class="q-num">${i + 1}</div>
+      <input type="text" value="${esc(q)}" placeholder="e.g. Is pre-existing illness covered?"
+        oninput="questions[${i}] = this.value" />
+      <button class="q-del" onclick="removeQ(${i})" title="Remove"
+        ${questions.length === 1 ? 'disabled' : ''}>✕</button>
+    </div>`).join('');
+}
+
+function addQuestion() {
+  questions.push('');
+  renderQuestions();
+  const inputs = document.querySelectorAll('.q-row input');
+  inputs[inputs.length - 1].focus();
+}
+
+function removeQ(i) {
+  if (questions.length <= 1) return;
+  questions.splice(i, 1);
+  renderQuestions();
+}
+
+/* ── STATUS DOT ───────────────────────────── */
+function setStatus(state) {
+  const dot = document.getElementById('status-dot');
+  const lbl = document.getElementById('status-label');
+  dot.style.background = state === 'busy' ? 'var(--amber)' :
+                         state === 'error' ? 'var(--red)' : 'var(--green)';
+  dot.style.boxShadow = `0 0 6px ${dot.style.background}`;
+  lbl.textContent = state === 'busy' ? 'Analyzing…' :
+                    state === 'error' ? 'Error' : 'Ready';
+}
+
+/* ── LOADING STATE ────────────────────────── */
+const STEPS = ['Fetching document', 'Chunking & embedding', 'Running queries', 'Building response'];
+let stepTimer, stepIdx = 0;
+
+function showLoading() {
+  stepIdx = 0;
+  document.getElementById('results').innerHTML = `
+    <div class="loading-state">
+      <div class="ld-dots"><span></span><span></span><span></span></div>
+      <div class="ld-title">Analyzing your document…</div>
+      <div class="ld-sub">This may take 10–30 seconds</div>
+      <div class="ld-steps" id="ld-steps">
+        ${STEPS.map((s, i) => `
+          <div class="ld-step ${i===0?'active':''}" id="step-${i}">
+            <div class="ld-step-dot"></div>${s}
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  stepTimer = setInterval(() => {
+    if (stepIdx < STEPS.length - 1) {
+      document.getElementById(`step-${stepIdx}`)?.classList.replace('active', 'done');
+      stepIdx++;
+      document.getElementById(`step-${stepIdx}`)?.classList.add('active');
+    }
+  }, 1800);
+}
+
+function stopLoading() { clearInterval(stepTimer); }
+
+/* ── RUN ──────────────────────────────────── */
+async function runAnalysis() {
+  const qs = questions.map(q => q.trim()).filter(Boolean);
+  if (!qs.length) return showError('Add at least one question.');
+
+  if (inputMode === 'upload' && !selectedFile)
+    return showError('Please select a file to upload.');
+  if (inputMode === 'url' && !document.getElementById('doc-url').value.trim())
+    return showError('Please enter a document URL.');
+
+  setBusy(true);
+  setStatus('busy');
+  showLoading();
+
+  try {
+    let data;
+
+    if (inputMode === 'upload') {
+      const form = new FormData();
+      form.append('file', selectedFile);
+      form.append('questions', JSON.stringify(qs));
+      const resp = await fetch(`${CONFIG.API_BASE}/hackrx/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${CONFIG.BEARER_TOKEN}` },
+        body: form,
+      });
+      data = await parseResp(resp);
+    } else {
+      const docUrl = document.getElementById('doc-url').value.trim();
+      const resp = await fetch(`${CONFIG.API_BASE}/hackrx/run`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${CONFIG.BEARER_TOKEN}`,
+        },
+        body: JSON.stringify({ documents: docUrl, questions: qs }),
+      });
+      data = await parseResp(resp);
+    }
+
+    stopLoading();
+    setStatus('ready');
+    showResults(data);
+  } catch (err) {
+    stopLoading();
+    setStatus('error');
+    showError(err.message || 'Unexpected error.');
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function parseResp(resp) {
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch {
+    throw new Error(`Non-JSON response (${resp.status}): ${text.slice(0, 200)}`);
+  }
+  if (!resp.ok) throw new Error(data?.detail || `API error ${resp.status}`);
+  return data;
+}
+
+function setBusy(busy) {
+  document.getElementById('run-btn').disabled = busy;
+  document.getElementById('btn-label').textContent = busy ? 'Analyzing…' : 'Analyze Document';
+  document.getElementById('btn-spinner').style.display = busy ? '' : 'none';
+}
+
+/* ── RESULTS ──────────────────────────────── */
+function showResults(data) {
+  const meta = data.metadata || {};
+  const answers = data.answers || [];
+
+  const strip = `
+    <div class="meta-strip">
+      <div class="meta-cell">
+        <div class="meta-lbl">Document</div>
+        <div class="meta-val" title="${esc(meta.source_filename || '')}">${esc((meta.source_filename || '—').slice(0, 26))}</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-lbl">Model</div>
+        <div class="meta-val">${esc(meta.model || '—')}</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-lbl">Chunks</div>
+        <div class="meta-val">${meta.chunks_indexed ?? '—'}</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-lbl">Time</div>
+        <div class="meta-val">${meta.processing_time_seconds != null ? meta.processing_time_seconds + 's' : '—'}</div>
+      </div>
+    </div>`;
+
+  const cards = answers.map((ans, i) => {
+    const clauses = (ans.clause_mapping || []).map(c => `
+      <div class="clause-item">
+        <div class="clause-text">"${esc(c.clause_text)}"</div>
+        <div class="clause-src">Source: ${esc(c.source)}</div>
+      </div>`).join('');
+
+    return `
+      <div class="answer-card">
+        <div class="answer-card-head" onclick="toggleAnswer(this)">
+          <span class="badge ${badgeClass(ans.decision)}">${esc(ans.decision || 'unknown')}</span>
+          <span class="answer-q">${esc(ans.question)}</span>
+          ${ans.amount != null ? `<span class="answer-amt">${fmtAmt(ans.amount)}</span>` : ''}
+          <span class="chevron">▾</span>
+        </div>
+        <div class="answer-body">
+          <div class="justification">${esc(ans.justification)}</div>
+          ${clauses ? `<div class="clauses-label">Policy clauses referenced</div>${clauses}` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('results').innerHTML =
+    strip + `<div class="answers-wrap">${cards}</div>`;
+
+  // Auto-open first card
+  const firstHead = document.querySelector('.answer-card-head');
+  if (firstHead) toggleAnswer(firstHead);
+}
+
+function toggleAnswer(head) {
+  const body = head.nextElementSibling;
+  const isOpen = head.classList.contains('open');
+  head.classList.toggle('open', !isOpen);
+  body.classList.toggle('open', !isOpen);
+}
+
+function showError(msg) {
+  document.getElementById('results').innerHTML = `
+    <div class="err-box">
+      <span class="err-icon">⚠</span>
+      <div><strong>Something went wrong:</strong><br>${esc(msg)}</div>
+    </div>`;
+}
+
+/* ── UTILS ────────────────────────────────── */
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function badgeClass(d) {
+  const k = (d || '').toLowerCase().replace(/[\s-]+/g,'_');
+  return ['covered','approved'].includes(k) ? 'badge-covered' :
+         ['not_covered','rejected'].includes(k) ? 'badge-not_covered' :
+         ['insufficient_information','parse_error','unknown'].includes(k) ? 'badge-insufficient' :
+         'badge-default';
+}
+
+function fmtAmt(a) {
+  return '$' + Number(a).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+/* ── INIT ─────────────────────────────────── */
+renderQuestions();
+</script>
+</body>
+</html>

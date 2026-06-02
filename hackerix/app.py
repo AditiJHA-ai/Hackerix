@@ -1,8 +1,12 @@
 """
 Insurance Policy Analysis API
 -------------------------------
-Accepts a URL to a policy document (PDF / DOCX / EML) and a list of
-questions. Returns structured JSON answers grounded in the document.
+Two analysis routes:
+  POST /hackrx/run     — accepts a document URL + questions (JSON body)
+  POST /hackrx/upload  — accepts a file upload + questions (multipart/form-data)
+
+Both routes are protected by a Bearer token.
+The frontend never receives or stores credentials.
 
 Run:
     uvicorn app:app --reload
@@ -21,9 +25,10 @@ from typing import List, Optional
 
 import aiohttp
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.staticfiles import StaticFiles
 from langchain_community.document_loaders import (
     PyPDFLoader,
     UnstructuredEmailLoader,
@@ -35,7 +40,6 @@ from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from pydantic import BaseModel, HttpUrl
 
 load_dotenv()
@@ -47,17 +51,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(me
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Config
+# Config  (all secrets stay on the server, never sent to the browser)
 # ---------------------------------------------------------------------------
-GROQ_API_KEY: str = os.environ["GROQ_API_KEY"]
-BEARER_TOKEN: str = os.environ["BEARER_TOKEN"]
-GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+BEARER_TOKEN: str = os.getenv("BEARER_TOKEN", "")
+LLM_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 EMBED_MODEL: str = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")
 CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "500"))
 CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "50"))
+MAX_UPLOAD_MB: int = int(os.getenv("MAX_UPLOAD_MB", "20"))
 
 # ---------------------------------------------------------------------------
-# Shared model singletons (loaded once at startup)
+# Shared model singletons
 # ---------------------------------------------------------------------------
 _embedding_model: Optional[HuggingFaceEmbeddings] = None
 _llm: Optional[ChatGroq] = None
@@ -74,9 +79,14 @@ def get_embedding_model() -> HuggingFaceEmbeddings:
 def get_llm() -> ChatGroq:
     global _llm
     if _llm is None:
-        log.info("Initialising Groq LLM: %s", GROQ_MODEL)
+        if not GROQ_API_KEY:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Missing GROQ_API_KEY in environment or .env.",
+            )
+        log.info("Initialising Groq LLM: %s", LLM_MODEL)
         _llm = ChatGroq(
-            model=GROQ_MODEL,
+            model=LLM_MODEL,
             api_key=GROQ_API_KEY,
             temperature=0,
         )
@@ -88,9 +98,8 @@ def get_llm() -> ChatGroq:
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    get_embedding_model()
-    get_llm()
-    log.info("✅ Models ready.")
+    # Keep startup lightweight; models are created lazily on first request.
+    log.info("Lifespan started. Models will be initialised on first use.")
     yield
     log.info("Shutting down.")
 
@@ -100,8 +109,8 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 app = FastAPI(
     title="Insurance Policy Analysis API",
-    description="Upload a policy document URL and ask questions — get structured JSON answers.",
-    version="2.0.0",
+    description="Analyse insurance documents via URL or file upload.",
+    version="3.0.0",
     lifespan=lifespan,
 )
 
@@ -177,40 +186,30 @@ class QueryResponse(BaseModel):
 # Document helpers
 # ---------------------------------------------------------------------------
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".eml", ".msg"}
+ALLOWED_MIME_TYPES = {
+    "application/pdf": ".pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "message/rfc822": ".eml",
+}
 
 
 def _infer_extension(url: str, content_type: str) -> str:
     suffix = Path(url.split("?")[0]).suffix.lower()
     if suffix in SUPPORTED_EXTENSIONS:
         return suffix
-    ct_map = {
-        "application/pdf": ".pdf",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-        "message/rfc822": ".eml",
-    }
-    return ct_map.get(content_type.split(";")[0].strip(), ".pdf")
+    return ALLOWED_MIME_TYPES.get(content_type.split(";")[0].strip(), ".pdf")
 
 
 async def download_document(url: str) -> tuple[str, str]:
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; PolicyBot/1.0)"}
+    """Download a remote document into a temp file. Returns (path, filename)."""
     async with aiohttp.ClientSession() as session:
-        async with session.get(
-            str(url), timeout=aiohttp.ClientTimeout(total=30), headers=headers
-        ) as resp:
+        async with session.get(str(url), timeout=aiohttp.ClientTimeout(total=30)) as resp:
             if resp.status != 200:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=f"Could not fetch document — remote server returned {resp.status}.",
                 )
             content_type = resp.headers.get("Content-Type", "")
-            if "text/html" in content_type:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=(
-                        "The URL returned an HTML page instead of a document. "
-                        "Make sure the URL points directly to a PDF or DOCX file."
-                    ),
-                )
             ext = _infer_extension(str(url), content_type)
             data = await resp.read()
 
@@ -221,7 +220,37 @@ async def download_document(url: str) -> tuple[str, str]:
     return tmp.name, filename
 
 
+async def save_upload(file: UploadFile) -> tuple[str, str]:
+    """
+    Save an uploaded file to a temp location.
+    Validates size and extension. Returns (path, original_filename).
+    """
+    original_name = file.filename or "upload"
+    ext = Path(original_name).suffix.lower()
+
+    if ext not in SUPPORTED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Unsupported file type '{ext}'. Allowed: {', '.join(sorted(SUPPORTED_EXTENSIONS))}",
+        )
+
+    data = await file.read()
+
+    max_bytes = MAX_UPLOAD_MB * 1024 * 1024
+    if len(data) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File exceeds the {MAX_UPLOAD_MB} MB limit.",
+        )
+
+    tmp = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
+    tmp.write(data)
+    tmp.close()
+    return tmp.name, original_name
+
+
 def load_documents(path: str) -> List[Document]:
+    """Load a local file into LangChain Documents."""
     ext = Path(path).suffix.lower()
     if ext == ".pdf":
         docs = PyPDFLoader(path).load()
@@ -235,6 +264,7 @@ def load_documents(path: str) -> List[Document]:
 
 
 def build_vector_store(documents: List[Document]) -> tuple[FAISS, int]:
+    """Chunk documents and build an in-memory FAISS index."""
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
@@ -249,17 +279,17 @@ def build_vector_store(documents: List[Document]) -> tuple[FAISS, int]:
 # LLM prompt & chain
 # ---------------------------------------------------------------------------
 POLICY_PROMPT = PromptTemplate(
-    input_variables=["context", "question"],
-    template="""
+        input_variables=["context", "question"],
+        template="""
 You are an expert assistant specialising in insurance and policy document analysis.
 Use ONLY the context below to answer the question.
 If the answer is not found in the context, set decision to "insufficient information".
 
 Return a JSON object with EXACTLY these fields:
-  "decision"      : string  — e.g. "approved", "rejected", "covered", "not covered", "insufficient information"
-  "amount"        : number or null  — payout/limit amount if stated, else null
-  "justification" : string  — concise explanation referencing the policy
-  "clause_mapping": list of {{"clause_text": string, "source": string}}
+    "decision"      : string  — e.g. "approved", "rejected", "covered", "not covered", "insufficient information"
+    "amount"        : number or null  — payout/limit amount if stated, else null
+    "justification" : string  — concise explanation referencing the policy
+    "clause_mapping": list of {{"clause_text": string, "source": string}}
 
 Output ONLY valid JSON. No markdown fences, no extra keys.
 
@@ -283,6 +313,7 @@ def parse_llm_answer(raw: str, question: str, source: str) -> Answer:
             justification=raw,
             clause_mapping=[],
         )
+
     return Answer(
         question=question,
         decision=data.get("decision", "unknown"),
@@ -298,51 +329,100 @@ def parse_llm_answer(raw: str, question: str, source: str) -> Answer:
     )
 
 
-async def process_document(doc_url: str, questions: List[str]) -> tuple[List[Answer], int]:
-    local_path, filename = await download_document(doc_url)
-    try:
-        try:
-            documents = load_documents(local_path)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Failed to parse document: {e}. Ensure the URL points to a valid PDF or DOCX.",
-            )
-        vector_store, n_chunks = build_vector_store(documents)
-        retriever = vector_store.as_retriever(search_kwargs={"k": 5})
+async def _run_pipeline(local_path: str, filename: str, questions: List[str]) -> tuple[List[Answer], int]:
+    """Shared core: load → chunk → embed → answer."""
+    documents = load_documents(local_path)
+    vector_store, n_chunks = build_vector_store(documents)
+    retriever = vector_store.as_retriever(search_kwargs={"k": 5})
+    chain = POLICY_PROMPT | get_llm()
 
+    answers: List[Answer] = []
+    for question in questions:
+        relevant_docs = retriever.invoke(question)
+        context_text = "\n\n".join(doc.page_content for doc in relevant_docs)
+        raw_result = chain.invoke({"context": context_text, "question": question})
+        raw_text = raw_result.content if hasattr(raw_result, "content") else str(raw_result)
+        answers.append(parse_llm_answer(raw_text, question, filename))
 
-        answers: List[Answer] = []
-        for question in questions:
-            relevant_docs = retriever.invoke(question)
-            context_text = "\n\n".join(doc.page_content for doc in relevant_docs)
-            raw_result = (POLICY_PROMPT | get_llm()).invoke({"context": context_text, "question": question}).content
-            answers.append(parse_llm_answer(raw_result, question, filename))
-
-        return answers, n_chunks
-    finally:
-        Path(local_path).unlink(missing_ok=True)
+    return answers, n_chunks
 
 
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
 @app.post(
     "/hackrx/run",
     response_model=QueryResponse,
     dependencies=[Depends(verify_token)],
-    summary="Analyse a policy document and answer questions",
+    summary="Analyse a policy document from a URL",
 )
-async def analyze_policy(request: QueryRequest):
+async def analyze_policy_url(request: QueryRequest):
+    """Original endpoint — accepts a public document URL."""
     start = time.perf_counter()
-    answers, n_chunks = await process_document(str(request.documents), request.questions)
+    local_path, filename = await download_document(str(request.documents))
+
+    try:
+        answers, n_chunks = await _run_pipeline(local_path, filename, request.questions)
+    finally:
+        Path(local_path).unlink(missing_ok=True)
+
     return QueryResponse(
         success=True,
         answers=answers,
         metadata=Metadata(
             processing_time_seconds=round(time.perf_counter() - start, 2),
-            source_filename=Path(str(request.documents).split("?")[0]).name,
-            model=GROQ_MODEL,
+            source_filename=filename,
+            model=LLM_MODEL,
+            chunks_indexed=n_chunks,
+        ),
+    )
+
+
+@app.post(
+    "/hackrx/upload",
+    response_model=QueryResponse,
+    dependencies=[Depends(verify_token)],
+    summary="Analyse an uploaded policy document (multipart/form-data)",
+)
+async def analyze_policy_upload(
+    file: UploadFile = File(..., description="PDF or DOCX policy document"),
+    questions: str = Form(..., description="JSON array of question strings"),
+):
+    """
+    New endpoint — accepts a file upload directly from the browser.
+
+    Form fields:
+      file      — the document (PDF / DOCX / EML)
+      questions — JSON-encoded list of strings, e.g. '["Is X covered?", "What is the deductible?"]'
+    """
+    # Parse questions from the JSON string sent by the form
+    try:
+        parsed_questions: List[str] = json.loads(questions)
+        if not isinstance(parsed_questions, list) or not parsed_questions:
+            raise ValueError
+        parsed_questions = [str(q).strip() for q in parsed_questions if str(q).strip()]
+    except (json.JSONDecodeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="'questions' must be a non-empty JSON array of strings.",
+        )
+
+    start = time.perf_counter()
+    local_path, filename = await save_upload(file)
+
+    try:
+        answers, n_chunks = await _run_pipeline(local_path, filename, parsed_questions)
+    finally:
+        Path(local_path).unlink(missing_ok=True)
+
+    return QueryResponse(
+        success=True,
+        answers=answers,
+        metadata=Metadata(
+            processing_time_seconds=round(time.perf_counter() - start, 2),
+            source_filename=filename,
+            model=LLM_MODEL,
             chunks_indexed=n_chunks,
         ),
     )
@@ -351,3 +431,10 @@ async def analyze_policy(request: QueryRequest):
 @app.get("/health", summary="Health check")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+
+# ---------------------------------------------------------------------------
+# Static file serving (optional — place index.html in a ./static folder)
+# Uncomment to serve the frontend from the same process:
+# ---------------------------------------------------------------------------
+app.mount("/", StaticFiles(directory="static", html=True), name="static")

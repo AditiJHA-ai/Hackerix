@@ -9,15 +9,13 @@ aiohttp>=3.9.0
 langchain>=0.2.0
 langchain-core>=0.2.0
 langchain-community>=0.2.0
-langchain-classic>=0.2.0
+langchain-groq>=0.1.0
 langchain-google-genai>=1.0.0
-langchain-google-vertexai>=2.0.0
 langchain-huggingface>=0.0.3
 langchain-text-splitters>=0.2.0
 
 # Google Generative AI SDK (pulled in by langchain-google-genai)
 google-generativeai>=0.5.0
-google-cloud-aiplatform>=1.49.0
 
 # Vector store
 faiss-cpu>=1.8.0
@@ -36,3 +34,4 @@ python-dotenv>=1.0.0
 
 # Data validation (FastAPI already uses this, explicit pin for clarity)
 pydantic>=2.0.0
+python-multipart>=0.0.9
