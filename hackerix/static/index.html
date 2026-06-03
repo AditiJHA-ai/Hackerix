@@ -6,42 +6,46 @@
 <title>PolicyLens — Insurance Document Analyzer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,500;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
 <style>
 /* ─── RESET ─────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 
-/* ─── CONFIG — edit these to match your deployment ─── */
-/* (moved to JS CONFIG block below for easier editing)  */
-
 /* ─── TOKENS ─────────────────────────────────── */
 :root {
-  --bg:       #0d0f14;
-  --surface:  #14171f;
-  --surface2: #1c2030;
-  --surface3: #232840;
-  --line:     rgba(255,255,255,.07);
-  --line2:    rgba(255,255,255,.12);
-  --fg:       #e8eaf0;
-  --fg2:      #9ba0b4;
-  --fg3:      #5a6080;
-  --accent:   #4f6ef7;
-  --accent2:  #6b85ff;
-  --green:    #34d399;
-  --green-bg: rgba(52,211,153,.1);
-  --green-bd: rgba(52,211,153,.25);
-  --red:      #f87171;
-  --red-bg:   rgba(248,113,113,.1);
-  --red-bd:   rgba(248,113,113,.25);
-  --amber:    #fbbf24;
-  --amber-bg: rgba(251,191,36,.1);
-  --amber-bd: rgba(251,191,36,.25);
-  --serif: 'Instrument Serif', Georgia, serif;
-  --sans:  'Inter', system-ui, sans-serif;
-  --r: 12px;
-  --r-sm: 8px;
-  --r-lg: 16px;
+  --bg:         #0e0e14;
+  --bg2:        #16161f;
+  --surface:    #1c1c27;
+  --surface2:   #222230;
+  --surface3:   #2a2a3a;
+  --line:       rgba(255,255,255,.07);
+  --line2:      rgba(255,255,255,.1);
+  --line3:      rgba(255,255,255,.16);
+  --fg:         #f0eeff;
+  --fg2:        #a8a4c0;
+  --fg3:        #5a566e;
+  --accent:     #7c5af5;
+  --accent2:    #9d7fff;
+  --accent3:    #c4b5fd;
+  --glow:       rgba(124,90,245,.4);
+  --glow2:      rgba(124,90,245,.15);
+  --green:      #34d399;
+  --green-bg:   rgba(52,211,153,.15);
+  --green-bd:   rgba(52,211,153,.3);
+  --red:        #f87171;
+  --red-bg:     rgba(248,113,113,.12);
+  --red-bd:     rgba(248,113,113,.3);
+  --amber:      #fbbf24;
+  --amber-bg:   rgba(251,191,36,.12);
+  --amber-bd:   rgba(251,191,36,.3);
+  --serif:      'Playfair Display', Georgia, serif;
+  --sans:       'DM Sans', system-ui, sans-serif;
+  --r:          10px;
+  --r-sm:       8px;
+  --r-lg:       14px;
+  --r-xl:       16px;
+  --r-2xl:      20px;
 }
 
 body {
@@ -49,121 +53,453 @@ body {
   background: var(--bg);
   color: var(--fg);
   min-height: 100vh;
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 /* ─── TOPBAR ─────────────────────────────────── */
 .topbar {
-  position: sticky; top: 0; z-index: 100;
-  height: 58px;
-  background: rgba(13,15,20,.85);
-  backdrop-filter: blur(16px);
+  height: 56px;
+  background: var(--bg2);
   border-bottom: 1px solid var(--line);
   display: flex; align-items: center;
-  padding: 0 2rem;
-  gap: 1rem;
+  padding: 0 1.5rem;
+  gap: 10px;
+  position: sticky; top: 0; z-index: 100;
 }
-.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .brand-mark {
-  width: 32px; height: 32px; border-radius: 9px;
-  background: linear-gradient(135deg, #3b5bff 0%, #6b85ff 100%);
+  width: 32px; height: 32px; border-radius: 10px;
+  background: linear-gradient(135deg, #6b3ff5 0%, #9d7fff 100%);
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--serif); font-style: italic; font-size: 17px; color: #fff;
+  font-size: 17px;
+  box-shadow: 0 0 14px rgba(124,90,245,.45);
+  flex-shrink: 0;
 }
-.brand-name { font-family: var(--serif); font-size: 19px; color: var(--fg); letter-spacing: -.3px; }
-.topbar-tagline { font-size: 12px; color: var(--fg3); margin-left: 4px; }
+.brand-name {
+  font-weight: 600; font-size: 16px; color: var(--fg); letter-spacing: -.2px;
+}
 .topbar-spacer { flex: 1; }
+.status-pill {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--surface); border: 1px solid var(--line2);
+  padding: 5px 12px; border-radius: 20px;
+}
 .status-dot {
   width: 7px; height: 7px; border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 6px var(--green);
+  background: var(--green); box-shadow: 0 0 7px var(--green);
   animation: pulse 2.5s ease-in-out infinite;
 }
-@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
-.status-label { font-size: 12px; color: var(--fg3); }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+.status-label { font-size: 12px; color: var(--fg2); font-weight: 500; }
 
-/* ─── HERO ───────────────────────────────────── */
-.hero {
-  text-align: center;
-  padding: 4rem 1.5rem 3rem;
-  max-width: 580px;
-  margin: 0 auto;
-}
-.hero-eyebrow {
-  display: inline-block;
-  font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--accent2); font-weight: 500; margin-bottom: 1rem;
-  padding: 4px 12px; border-radius: 20px;
-  border: 1px solid rgba(107,133,255,.25);
-  background: rgba(107,133,255,.08);
-}
-.hero h1 {
-  font-family: var(--serif);
-  font-size: clamp(2rem, 5vw, 2.75rem);
-  font-weight: 400;
-  line-height: 1.15;
-  color: var(--fg);
-  margin-bottom: .75rem;
-  letter-spacing: -.5px;
-}
-.hero h1 em { font-style: italic; color: var(--accent2); }
-.hero p {
-  font-size: 15px; color: var(--fg2); line-height: 1.65; max-width: 440px; margin: 0 auto;
-}
-
-/* ─── MAIN LAYOUT ────────────────────────────── */
-.main {
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 0 1.5rem 5rem;
+/* ─── APP SHELL ──────────────────────────────── */
+.app {
   display: grid;
-  grid-template-columns: 420px 1fr;
-  gap: 1.5rem;
-  align-items: start;
+  grid-template-columns: 380px 1fr;
+  height: calc(100vh - 56px);
+  overflow: hidden;
 }
 
-/* ─── (rest of CSS identical to original index.html) */
+/* ─── LEFT PANEL ─────────────────────────────── */
+.left-panel {
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: var(--bg2);
+  overflow-y: auto;
+  padding: 1.25rem;
+  gap: 10px;
+}
+
+/* ─── CARD ───────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line2);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.card-head {
+  padding: .85rem 1.1rem;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.card-head-icon {
+  font-size: 13px; opacity: .7;
+}
+.card-head-label {
+  font-size: 11px; font-weight: 600; color: var(--fg3);
+  text-transform: uppercase; letter-spacing: .1em;
+}
+.card-body { padding: 1rem; }
+
+/* ─── SEGMENT TOGGLE ─────────────────────────── */
+.seg {
+  display: flex; background: var(--bg); border-radius: var(--r-sm);
+  padding: 3px; gap: 3px; margin-bottom: 1rem;
+  border: 1px solid var(--line);
+}
+.seg-btn {
+  flex: 1; padding: 7px 10px; border: none; border-radius: 6px;
+  font-family: var(--sans); font-size: 12px; font-weight: 500;
+  cursor: pointer; color: var(--fg3); background: transparent;
+  transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.seg-btn.active {
+  background: var(--surface2);
+  color: var(--fg);
+  border: 1px solid var(--line2);
+}
+
+/* ─── FILE UPLOAD ────────────────────────────── */
+.file-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: .8rem 1rem;
+  background: var(--surface2); border-radius: var(--r-lg);
+  border: 1px solid var(--line2);
+  cursor: pointer;
+  position: relative; overflow: hidden;
+  transition: border-color .2s;
+}
+.file-row:hover { border-color: var(--line3); }
+.file-row input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.file-thumb {
+  width: 42px; height: 42px; border-radius: var(--r-sm);
+  background: var(--surface3); border: 1px solid var(--line2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.file-info { flex: 1; min-width: 0; }
+.file-name {
+  font-size: 13px; font-weight: 500; color: var(--fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.file-meta { font-size: 11px; color: var(--fg3); margin-top: 2px; }
+.file-action {
+  width: 32px; height: 32px; border-radius: var(--r-sm);
+  background: var(--surface3); border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0; cursor: pointer; z-index: 2;
+  transition: background .15s;
+}
+.file-action:hover { background: var(--red-bg); color: var(--red); border-color: var(--red-bd); }
+
+/* Drop zone (no file) */
+.drop-zone-empty {
+  border: 1.5px dashed var(--line2);
+  border-radius: var(--r-lg);
+  padding: 2rem 1rem;
+  text-align: center; cursor: pointer;
+  transition: border-color .25s, background .25s;
+  background: var(--bg);
+  position: relative; min-height: 110px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+}
+.drop-zone-empty:hover { border-color: var(--accent2); background: rgba(124,90,245,.04); }
+.drop-zone-empty input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.drop-icon { font-size: 24px; opacity: .35; }
+.drop-title { font-size: 13px; color: var(--fg2); font-weight: 500; }
+.drop-sub { font-size: 11px; color: var(--fg3); }
+
+/* URL input */
+.url-field { display: flex; flex-direction: column; gap: 6px; }
+.url-field label { font-size: 11px; font-weight: 600; color: var(--fg3); letter-spacing: .08em; text-transform: uppercase; }
+.url-field input[type="text"] {
+  width: 100%; padding: 9px 12px;
+  background: var(--bg); border: 1px solid var(--line2);
+  border-radius: var(--r-sm);
+  font-family: var(--sans); font-size: 13px; color: var(--fg);
+  outline: none; transition: border-color .15s;
+}
+.url-field input:focus { border-color: var(--accent); }
+.url-field input::placeholder { color: var(--fg3); }
+
+/* ─── QUESTIONS ──────────────────────────────── */
+.section-label {
+  font-size: 10px; font-weight: 600; color: var(--fg3);
+  text-transform: uppercase; letter-spacing: .1em;
+  padding: 0 .1rem; margin-bottom: 8px;
+}
+.q-list { display: flex; flex-direction: column; gap: 8px; }
+.q-row {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--surface); border: 1px solid var(--line2);
+  border-radius: var(--r-lg); padding: .6rem .75rem;
+}
+.q-num {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #6b3ff5, #9d7fff);
+  color: #fff; font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 10px rgba(124,90,245,.4);
+}
+.q-row input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-family: var(--sans); font-size: 13px; color: var(--fg);
+  min-width: 0;
+}
+.q-row input::placeholder { color: var(--fg3); }
+.q-del {
+  width: 28px; height: 28px; border: 1px solid transparent; background: transparent;
+  cursor: pointer; color: var(--fg3); font-size: 11px; border-radius: var(--r-sm);
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  transition: color .15s, background .15s, border-color .15s;
+}
+.q-del:hover { color: var(--red); background: var(--red-bg); border-color: var(--red-bd); }
+.q-del:disabled { opacity: .2; cursor: default; pointer-events: none; }
+
+.btn-add-q {
+  margin-top: 8px;
+  font-size: 12px; color: var(--fg2);
+  background: transparent;
+  border: 1px dashed var(--line2); cursor: pointer; padding: 8px 14px;
+  border-radius: var(--r-sm); font-family: var(--sans); font-weight: 500;
+  transition: background .2s, border-color .2s, color .2s;
+  display: inline-flex; align-items: center; gap: 5px; width: 100%; justify-content: center;
+}
+.btn-add-q:hover { background: var(--surface2); border-color: var(--line3); color: var(--fg); }
+
+/* ─── SPACER & ANALYZE BTN ───────────────────── */
+.panel-spacer { flex: 1; }
+
+.btn-run {
+  width: 100%;
+  padding: 13px; border: none; border-radius: var(--r-lg);
+  background: var(--surface2);
+  border: 1px solid var(--line2);
+  color: var(--fg2); font-family: var(--sans); font-size: 14px; font-weight: 500;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px;
+  transition: background .2s, border-color .2s, color .2s;
+  letter-spacing: .01em;
+}
+.btn-run:hover {
+  background: var(--surface3);
+  border-color: var(--line3);
+  color: var(--fg);
+}
+.btn-run:active { transform: scale(.99); }
+.btn-run:disabled {
+  opacity: .5;
+  cursor: not-allowed; transform: none;
+}
+.run-icon { font-size: 16px; opacity: .6; }
+.spinner {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.2); border-top-color: var(--fg2);
+  animation: spin .65s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── RIGHT PANEL ────────────────────────────── */
+.right-panel {
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.results-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0; background: var(--bg);
+}
+.results-title {
+  font-size: 15px; font-weight: 600; color: var(--fg);
+}
+.results-meta {
+  display: flex; align-items: center; gap: 10px;
+}
+.results-meta-pill {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--fg3);
+}
+.results-meta-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 6px var(--green);
+}
+
+.results-scroll {
+  flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+/* ─── EMPTY STATE ────────────────────────────── */
+.empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 3rem 2rem; gap: 10px;
+}
+.empty-glyph { font-size: 2.5rem; opacity: .2; }
+.empty-state h3 {
+  font-family: var(--serif); font-size: 1.25rem; font-style: italic;
+  color: var(--fg2); font-weight: 500;
+}
+.empty-state p { font-size: 13px; color: var(--fg3); max-width: 240px; line-height: 1.6; }
+
+/* ─── LOADING STATE ──────────────────────────── */
+.loading-state {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1rem; padding: 3rem 2rem; text-align: center;
+}
+.ld-dots { display: flex; gap: 7px; }
+.ld-dots span {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); animation: ldpulse .9s ease-in-out infinite;
+}
+.ld-dots span:nth-child(2) { animation-delay: .15s; background: var(--accent2); }
+.ld-dots span:nth-child(3) { animation-delay: .3s; background: var(--accent3); }
+@keyframes ldpulse { 0%,100% { transform:scale(.4); opacity:.2; } 50% { transform:scale(1); opacity:1; } }
+.ld-title { font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--fg2); }
+.ld-sub { font-size: 12px; color: var(--fg3); }
+.ld-steps { display: flex; flex-direction: column; gap: 5px; width: 100%; max-width: 260px; }
+.ld-step {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 12px; color: var(--fg3); padding: 6px 10px;
+  border-radius: var(--r-sm); transition: all .3s;
+}
+.ld-step.done { color: var(--green); }
+.ld-step.active { color: var(--fg2); background: var(--surface2); border: 1px solid var(--line2); }
+.ld-step-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--line2); flex-shrink: 0;
+  transition: background .3s;
+}
+.ld-step.done .ld-step-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.ld-step.active .ld-step-dot { background: var(--accent); animation: ldpulse .9s ease-in-out infinite; }
+
+/* ─── ANSWER CARDS ───────────────────────────── */
+.answer-card {
+  background: var(--surface);
+  border: 1px solid var(--line2);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.answer-card:hover { border-color: var(--line3); }
+
+.answer-card-head {
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  transition: background .15s;
+}
+.answer-card-head:hover { background: var(--surface2); }
+.answer-card-head.open {
+  background: var(--surface2);
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600;
+  border: 1px solid;
+}
+.badge-covered, .badge-approved { background: var(--green-bg); color: var(--green); border-color: var(--green-bd); }
+.badge-not-covered, .badge-not_covered, .badge-rejected { background: var(--red-bg); color: var(--red); border-color: var(--red-bd); }
+.badge-insufficient, .badge-parse_error, .badge-unknown { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-bd); }
+.badge-default { background: var(--surface3); color: var(--fg2); border-color: var(--line2); }
+
+.answer-q { font-size: 14px; font-weight: 500; flex: 1; line-height: 1.35; color: var(--fg); }
+.answer-amt {
+  flex-shrink: 0; margin-left: 6px;
+  font-family: var(--serif); font-size: 20px; color: var(--fg); font-weight: 500;
+  white-space: nowrap;
+}
+.chevron {
+  flex-shrink: 0; color: var(--fg3);
+  transition: transform .22s; font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+}
+.answer-card-head.open .chevron { transform: rotate(180deg); color: var(--accent2); }
+
+.answer-body {
+  display: none; padding: 0 16px 16px;
+  border-top: 1px solid var(--line);
+  animation: fadeDown .2s ease;
+}
+.answer-body.open { display: block; }
+@keyframes fadeDown { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+
+.justification {
+  font-size: 13px; color: var(--fg2); line-height: 1.7;
+  padding: 13px 0 10px; font-weight: 300;
+}
+
+.clauses-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--fg3); margin-bottom: 8px; font-weight: 600;
+}
+.clause-item {
+  padding: 10px 13px; margin-bottom: 7px;
+  background: var(--bg2); border-radius: var(--r-sm);
+  border-left: 2px solid var(--accent);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+}
+.clause-item:last-child { margin-bottom: 0; }
+.clause-text {
+  font-size: 12px; color: var(--fg2); font-style: italic;
+  line-height: 1.55; font-family: var(--serif);
+}
+.clause-src { font-size: 11px; color: var(--fg3); margin-top: 5px; }
+
+/* ─── META STRIP ─────────────────────────────── */
+.meta-cards {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 8px; margin-bottom: 2px;
+}
+.meta-card {
+  background: var(--surface); border: 1px solid var(--line2);
+  border-radius: var(--r-lg); padding: 10px 13px;
+}
+.meta-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--fg3); margin-bottom: 3px; font-weight: 600; }
+.meta-val { font-size: 13px; font-weight: 500; color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ─── ERROR ──────────────────────────────────── */
+.err-box {
+  background: var(--red-bg); border: 1px solid var(--red-bd);
+  border-radius: var(--r-lg); padding: 1rem 1.25rem;
+  color: var(--red); font-size: 13px; line-height: 1.55;
+  display: flex; gap: 10px;
+}
+.err-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* ─── RESPONSIVE ─────────────────────────────── */
+@media (max-width: 800px) {
+  .app { grid-template-columns: 1fr; height: auto; overflow: visible; }
+  .right-panel { min-height: 70vh; }
+  .meta-cards { grid-template-columns: repeat(2, 1fr); }
+}
 </style>
 </head>
 <body>
 
 <!-- ── TOP BAR ──────────────────────────────────── -->
 <header class="topbar">
-  <a class="brand" href="#">
-    <div class="brand-mark">P</div>
-    <span class="brand-name">PolicyLens</span>
-  </a>
-  <span class="topbar-tagline">Insurance Document Analyzer</span>
+  <div class="brand-mark">✦</div>
+  <span class="brand-name">PolicyLens</span>
   <div class="topbar-spacer"></div>
-  <div class="status-dot" id="status-dot"></div>
-  <span class="status-label" id="status-label">Ready</span>
+  <div class="status-pill">
+    <div class="status-dot" id="status-dot"></div>
+    <span class="status-label" id="status-label">Ready</span>
+  </div>
 </header>
 
-<!-- ── HERO ─────────────────────────────────────── -->
-<section class="hero">
-  <span class="hero-eyebrow">AI-Powered</span>
-  <h1>Understand your policy<br><em>instantly</em></h1>
-  <p>Upload a PDF or DOCX, ask plain-English questions, and get grounded answers with exact clause references.</p>
-</section>
+<!-- ── APP SHELL ─────────────────────────────────── -->
+<div class="app">
 
-<!-- ── MAIN ─────────────────────────────────────── -->
-<div class="main">
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
 
-  <!-- LEFT: INPUT -->
-  <div>
-    <!-- Document input -->
+    <!-- Document card -->
     <div class="card">
       <div class="card-head">
-        <div class="card-icon">📄</div>
-        <div class="card-head-text">
-          <h3>Policy Document</h3>
-          <p>PDF, DOCX, or EML supported</p>
-        </div>
+        <span class="card-head-icon">📄</span>
+        <span class="card-head-label">Policy Document</span>
       </div>
       <div class="card-body">
-
         <div class="seg" role="tablist">
           <button class="seg-btn active" id="tab-upload" role="tab" onclick="setInputMode('upload')">⬆ Upload File</button>
           <button class="seg-btn" id="tab-url" role="tab" onclick="setInputMode('url')">🔗 Paste URL</button>
@@ -171,56 +507,80 @@ body {
 
         <!-- Upload pane -->
         <div id="pane-upload">
-          <div class="drop-zone" id="drop-zone">
+          <!-- No-file state -->
+          <div class="drop-zone-empty" id="drop-zone" style="">
             <input type="file" id="file-input" accept=".pdf,.docx,.eml" />
-            <div class="drop-icon" id="drop-icon">📂</div>
+            <div class="drop-icon">📂</div>
             <div class="drop-title" id="drop-title">Drop your file here</div>
-            <div class="drop-sub" id="drop-sub">or click to browse — PDF, DOCX, EML up to 20 MB</div>
-            <div class="drop-filename" id="drop-filename" style="display:none;"></div>
-            <button class="drop-clear" id="drop-clear" style="display:none;" onclick="clearFile(event)" title="Remove file">✕</button>
+            <div class="drop-sub">PDF, DOCX, EML up to 20 MB</div>
+          </div>
+          <!-- Has-file state -->
+          <div class="file-row" id="file-row" style="display:none;">
+            <input type="file" id="file-input-swap" accept=".pdf,.docx,.eml" />
+            <div class="file-thumb" id="file-thumb">📕</div>
+            <div class="file-info">
+              <div class="file-name" id="file-name-label">—</div>
+              <div class="file-meta" id="file-meta-label">ready to analyze</div>
+            </div>
+            <div class="file-action" onclick="clearFile(event)" title="Remove file">✕</div>
           </div>
         </div>
 
         <!-- URL pane -->
         <div id="pane-url" style="display:none;">
-          <div class="field">
-            <label class="lbl">Document URL</label>
+          <div class="url-field">
+            <label>Document URL</label>
             <input type="text" id="doc-url" placeholder="https://example.com/policy.pdf" />
           </div>
-          <p style="font-size:12px; color:var(--fg3); line-height:1.55;">
+          <p style="font-size:12px; color:var(--fg3); line-height:1.6; margin-top:.6rem;">
             Link must be publicly accessible. Supports PDF, DOCX, and EML.
           </p>
         </div>
-
       </div>
     </div>
 
-    <!-- Questions -->
+    <!-- Questions card -->
     <div class="card">
       <div class="card-head">
-        <div class="card-icon">❓</div>
-        <div class="card-head-text">
-          <h3>Your Questions</h3>
-          <p>Ask anything about the document</p>
-        </div>
+        <span class="card-head-icon">❓</span>
+        <span class="card-head-label">Your Questions</span>
       </div>
       <div class="card-body">
         <div class="q-list" id="q-list"></div>
         <button class="btn-add-q" onclick="addQuestion()">＋ Add question</button>
-        <button class="btn-run" id="run-btn" onclick="runAnalysis()">
-          <span id="btn-label">Analyze Document</span>
-          <span id="btn-spinner" class="spinner" style="display:none;"></span>
-        </button>
       </div>
     </div>
+
+    <div class="panel-spacer"></div>
+
+    <!-- Analyze button -->
+    <button class="btn-run" id="run-btn" onclick="runAnalysis()">
+      <span class="run-icon">▶</span>
+      <span id="btn-label">Analyze document</span>
+      <span id="btn-spinner" class="spinner" style="display:none;"></span>
+    </button>
+
   </div>
 
-  <!-- RIGHT: RESULTS -->
-  <div class="results" id="results">
-    <div class="empty-state">
-      <div class="empty-glyph">📋</div>
-      <h3>Results will appear here</h3>
-      <p>Upload a document, ask your questions, and hit Analyze.</p>
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="results-header">
+      <span class="results-title">Analysis results</span>
+      <div class="results-meta" id="results-meta" style="display:none;">
+        <span class="results-meta-pill">
+          <span class="results-meta-dot"></span>
+          <span id="meta-summary">—</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Scrollable area -->
+    <div class="results-scroll" id="results">
+      <div class="empty-state">
+        <div class="empty-glyph">📋</div>
+        <h3>Results will appear here</h3>
+        <p>Upload a document, add your questions, and hit Analyze.</p>
+      </div>
     </div>
   </div>
 
@@ -231,12 +591,12 @@ body {
    CONFIG — update these for your deployment
    ══════════════════════════════════════════════ */
 const CONFIG = {
-  API_BASE:     'http://127.0.0.1:8000',   // local server
+  API_BASE:     'http://localhost:8000',
   BEARER_TOKEN: '729073fd98123a67be26b7a7d3ffe959a856b9616b3a9385d9452c5967ac8375',
 };
 /* ══════════════════════════════════════════════ */
 
-let inputMode = 'upload';   // 'upload' | 'url'
+let inputMode = 'upload';
 let selectedFile = null;
 let questions = [
   'What is the deductible amount?',
@@ -256,37 +616,34 @@ function setInputMode(m) {
 /* ── FILE DROP / PICK ─────────────────────── */
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
+const fileInputSwap = document.getElementById('file-input-swap');
 
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent2)'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; });
 dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('dragover');
+  e.preventDefault(); dropZone.style.borderColor = '';
   const f = e.dataTransfer.files[0];
   if (f) setFile(f);
 });
 fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+fileInputSwap.addEventListener('change', () => { if (fileInputSwap.files[0]) setFile(fileInputSwap.files[0]); });
 
 function setFile(f) {
   selectedFile = f;
-  dropZone.classList.add('has-file');
-  document.getElementById('drop-icon').textContent = f.name.endsWith('.pdf') ? '📕' : '📘';
-  document.getElementById('drop-title').textContent = 'File selected';
-  document.getElementById('drop-sub').style.display = 'none';
-  document.getElementById('drop-filename').style.display = '';
-  document.getElementById('drop-filename').textContent = f.name;
-  document.getElementById('drop-clear').style.display = '';
+  const ext = f.name.split('.').pop().toLowerCase();
+  document.getElementById('file-thumb').textContent = ext === 'pdf' ? '📕' : ext === 'docx' ? '📘' : '📧';
+  document.getElementById('file-name-label').textContent = f.name;
+  document.getElementById('file-meta-label').textContent = (f.size / 1024 / 1024).toFixed(1) + ' MB · ready';
+  document.getElementById('drop-zone').style.display = 'none';
+  document.getElementById('file-row').style.display = 'flex';
 }
 
 function clearFile(e) {
   e.stopPropagation();
   selectedFile = null;
-  fileInput.value = '';
-  dropZone.classList.remove('has-file');
-  document.getElementById('drop-icon').textContent = '📂';
-  document.getElementById('drop-title').textContent = 'Drop your file here';
-  document.getElementById('drop-sub').style.display = '';
-  document.getElementById('drop-filename').style.display = 'none';
-  document.getElementById('drop-clear').style.display = 'none';
+  fileInput.value = ''; fileInputSwap.value = '';
+  document.getElementById('drop-zone').style.display = '';
+  document.getElementById('file-row').style.display = 'none';
 }
 
 /* ── QUESTIONS ────────────────────────────── */
@@ -318,9 +675,10 @@ function removeQ(i) {
 function setStatus(state) {
   const dot = document.getElementById('status-dot');
   const lbl = document.getElementById('status-label');
-  dot.style.background = state === 'busy' ? 'var(--amber)' :
-                         state === 'error' ? 'var(--red)' : 'var(--green)';
-  dot.style.boxShadow = `0 0 6px ${dot.style.background}`;
+  const col = state === 'busy' ? 'var(--amber)' :
+              state === 'error' ? 'var(--red)' : 'var(--green)';
+  dot.style.background = col;
+  dot.style.boxShadow = `0 0 7px ${col}`;
   lbl.textContent = state === 'busy' ? 'Analyzing…' :
                     state === 'error' ? 'Error' : 'Ready';
 }
@@ -359,7 +717,6 @@ function stopLoading() { clearInterval(stepTimer); }
 async function runAnalysis() {
   const qs = questions.map(q => q.trim()).filter(Boolean);
   if (!qs.length) return showError('Add at least one question.');
-
   if (inputMode === 'upload' && !selectedFile)
     return showError('Please select a file to upload.');
   if (inputMode === 'url' && !document.getElementById('doc-url').value.trim())
@@ -371,7 +728,6 @@ async function runAnalysis() {
 
   try {
     let data;
-
     if (inputMode === 'upload') {
       const form = new FormData();
       form.append('file', selectedFile);
@@ -419,7 +775,7 @@ async function parseResp(resp) {
 
 function setBusy(busy) {
   document.getElementById('run-btn').disabled = busy;
-  document.getElementById('btn-label').textContent = busy ? 'Analyzing…' : 'Analyze Document';
+  document.getElementById('btn-label').textContent = busy ? 'Analyzing…' : 'Analyze document';
   document.getElementById('btn-spinner').style.display = busy ? '' : 'none';
 }
 
@@ -428,27 +784,22 @@ function showResults(data) {
   const meta = data.metadata || {};
   const answers = data.answers || [];
 
-  const strip = `
-    <div class="meta-strip">
-      <div class="meta-cell">
+  // Update header meta
+  const metaEl = document.getElementById('results-meta');
+  const metaSum = document.getElementById('meta-summary');
+  metaEl.style.display = 'flex';
+  const t = meta.processing_time_seconds != null ? ` · ${meta.processing_time_seconds}s` : '';
+  metaSum.textContent = `${answers.length} question${answers.length !== 1 ? 's' : ''}${t}`;
+
+  const metaCards = `
+    <div class="meta-cards">
+      <div class="meta-card">
         <div class="meta-lbl">Document</div>
-        <div class="meta-val" title="${esc(meta.source_filename || '')}">${esc((meta.source_filename || '—').slice(0, 26))}</div>
-      </div>
-      <div class="meta-cell">
-        <div class="meta-lbl">Model</div>
-        <div class="meta-val">${esc(meta.model || '—')}</div>
-      </div>
-      <div class="meta-cell">
-        <div class="meta-lbl">Chunks</div>
-        <div class="meta-val">${meta.chunks_indexed ?? '—'}</div>
-      </div>
-      <div class="meta-cell">
-        <div class="meta-lbl">Time</div>
-        <div class="meta-val">${meta.processing_time_seconds != null ? meta.processing_time_seconds + 's' : '—'}</div>
+        <div class="meta-val" title="${esc(meta.source_filename || '')}">${esc((meta.source_filename || '—').slice(0, 22))}</div>
       </div>
     </div>`;
 
-  const cards = answers.map((ans, i) => {
+  const cards = answers.map((ans) => {
     const clauses = (ans.clause_mapping || []).map(c => `
       <div class="clause-item">
         <div class="clause-text">"${esc(c.clause_text)}"</div>
@@ -458,7 +809,7 @@ function showResults(data) {
     return `
       <div class="answer-card">
         <div class="answer-card-head" onclick="toggleAnswer(this)">
-          <span class="badge ${badgeClass(ans.decision)}">${esc(ans.decision || 'unknown')}</span>
+          <span class="badge ${badgeClass(ans.decision)}">${capitalize(esc(ans.decision || 'unknown'))}</span>
           <span class="answer-q">${esc(ans.question)}</span>
           ${ans.amount != null ? `<span class="answer-amt">${fmtAmt(ans.amount)}</span>` : ''}
           <span class="chevron">▾</span>
@@ -470,10 +821,8 @@ function showResults(data) {
       </div>`;
   }).join('');
 
-  document.getElementById('results').innerHTML =
-    strip + `<div class="answers-wrap">${cards}</div>`;
+  document.getElementById('results').innerHTML = metaCards + cards;
 
-  // Auto-open first card
   const firstHead = document.querySelector('.answer-card-head');
   if (firstHead) toggleAnswer(firstHead);
 }
@@ -496,6 +845,10 @@ function showError(msg) {
 /* ── UTILS ────────────────────────────────── */
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function badgeClass(d) {
