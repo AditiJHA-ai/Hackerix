@@ -1,3 +1,14 @@
+---
+title: Hackerix
+emoji: 📄
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+
 # Insurance Policy Analysis API
 
 A FastAPI service that analyses insurance policy documents (PDF, DOCX, EML) and answers
