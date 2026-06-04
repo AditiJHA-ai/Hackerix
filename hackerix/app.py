@@ -437,4 +437,6 @@ async def health_check():
 # Static file serving (optional — place index.html in a ./static folder)
 # Uncomment to serve the frontend from the same process:
 # ---------------------------------------------------------------------------
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app.mount("/", StaticFiles(directory=os.path.join(BASE_DIR, "static"), html=True), name="static")
