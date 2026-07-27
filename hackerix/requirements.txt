@@ -24,9 +24,9 @@ sentence-transformers>=3.0.0
 # Document loaders
 pypdf>=4.0.0
 python-docx>=1.1.0
-pypdf>=4.0.0          ← keep (PDF)
-python-docx>=1.1.0    ← keep (DOCX)
-mail-parser>=3.15.0   ← add this instead of unstructured for EML
+pypdf>=4.0.0          
+python-docx>=1.1.0    
+mail-parser>=3.15.0  
 
 # Config / environment
 python-dotenv>=1.0.0
